@@ -108,7 +108,7 @@ script install
 	tell BuildASDate to exec:{}
 	set targetDir to joinPath(dir, "com.kraigparkinson")
 	set targetPath to joinPath(targetDir, "ASDate.scptd")
-	
+	(*
 	if pathExists(targetPath) then
 		tell application "Terminal"
 			activate
@@ -119,7 +119,7 @@ script install
 				default button "Cancel" cancel button "Cancel"
 		end tell
 	end if
-	
+	*)
 	copyItem at "build/ASDate.scptd" into targetDir with overwriting
 	ohai("ASDate installed at" & space & targetPath)
 	
