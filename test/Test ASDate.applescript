@@ -176,8 +176,7 @@ script |Format Dates|
 	script |next|
 		property parent : UnitTest(me)
 		
---		set originalDate to date "2015-09-18 12:00:00AM"
-		set originalDate to date "2015-18-09 12:00:00AM"
+		set originalDate to date "2015-09-18 12:00:00AM"
 		set expectedDate to originalDate + 1 * days		
 		
 		my assertEqual(expectedDate, (dateutil's CalendarDate's create on originalDate)'s next()'s asDate())
