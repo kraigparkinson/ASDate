@@ -254,10 +254,13 @@ script |Format Dates|
 		property parent : UnitTest(me)
 		
 		tell dateutil's CalendarDate
-			my testParseFromText(today at "8:00:00AM", "monday", "8:00:00AM")			
-			my shouldEqual((today at "8:00:00AM")'s asDate(), (parse from "monday" at "8:00:00AM")'s asDate())
-			my shouldEqual((tomorrow at "8:00:00AM")'s asDate(), (parse from "tuesday" at "8:00:00AM")'s asDate())
---			my testParseFromText(aMon at "8:00:00AM", "monday", "8:00:00AM")			
+			my shouldEqual(Monday, weekday of (parse from "monday" at "8:00:00AM")'s asDate())
+			my shouldEqual(Tuesday, weekday of (parse from "tuesday" at "8:00:00AM")'s asDate())
+			my shouldEqual(Wednesday, weekday of (parse from "wednesday" at "8:00:00AM")'s asDate())
+			my shouldEqual(Thursday, weekday of (parse from "thursday" at "8:00:00AM")'s asDate())
+			my shouldEqual(Friday, weekday of (parse from "friday" at "8:00:00AM")'s asDate())
+			my shouldEqual(Saturday, weekday of (parse from "saturday" at "8:00:00AM")'s asDate())
+			my shouldEqual(Sunday, weekday of (parse from "sunday" at "8:00:00AM")'s asDate())
 		end tell
 	end script
 
