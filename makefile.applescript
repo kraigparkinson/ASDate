@@ -131,7 +131,6 @@ script BuildTests
 	property description : "Build tests, but do not run them"
 	
 	owarn("Due to bugs in OS X Yosemite, building tests requires ASUnit to be installed.")
-	tell install to exec:{}
 	makeScriptBundle from "test/Test ASDate.applescript" at "test" with overwriting
 end script
 
