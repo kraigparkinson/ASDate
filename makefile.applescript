@@ -111,7 +111,7 @@ script install
 	set targetDir to joinPath(dir, "com.kraigparkinson")
 	set targetPath to joinPath(targetDir, "ASDate.scptd")
 
-	copyItem at "build/com.kraigparkinson/ASDate.scptd" into targetDir with overwriting
+	copyItem at "build/Script Libraries/com.kraigparkinson/ASDate.scptd" into targetDir with overwriting
 	ohai("ASDate installed at" & space & targetPath)
 	
 end script
