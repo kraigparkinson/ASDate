@@ -8,47 +8,72 @@ property DELIMS : {"-", "T", ":"}
 property DAYS_OF_WEEK : {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
 property TIME_DELIM : space & "at" & space
 
-script CalendarDate
-	property MIDNIGHT : "12:00:00AM"
-	property theDate : missing value
-	
-	on make new CalendarDate with data dateValue as date given overridetime:timeText : missing value
-		if (dateValue is missing value) then error "Can't create CalendarDate with missing value."
-		
-		copy CalendarDate to newDate
-		tell newDate to reset()
-		if (timeText is not missing value) then set dateValue to date timeText of dateValue
-		 
-		tell newDate to initializeDate(dateValue)
-		
-		if (not newDate's initialized()) then error "Could not make new CalendarDate with " & dateValue & " with overridetime" & timeText
-		return newDate
-	end make
-	
-	on reset()
-		set theDate to missing value
-	end reset
-	
-	on initialized()
-		return theDate is not missing value
-	end initialized
-			
-	on verifyInitalization()
-		if (not initialized()) then error "CalendarDate instance not initialized."
-	end verifyInitalization
-	
+script CalendarDateFactory
 	on create on dateValue as date at aTime as text : missing value
 		if (dateValue is missing value) then error "Can't create CalendarDate with missing value."
+
+		if (aTime is not missing value) then set dateValue to date aTime of dateValue
+
+		script CalendarDate
+			property MIDNIGHT : "12:00:00AM"
+			property theDate : dateValue
 		
-		set newDate to make new CalendarDate with data dateValue given overridetime:aTime
+			on increment by numDays
+				set newDate to create on (theDate + numDays * days)
+				return newDate
+			end next
+
+			on next()
+				return increment by 1
+			end next
+
+			on previous()
+				return increment by -1
+			end previous
+
+			on asDate()
+				return theDate
+			end asDate
+	
+			-- From http://www.leancrew.com/all-this/2012/09/eight-days-a-week/
+			on nextWeekday(theWeekday)		
+				if (theWeekday is not in {Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}) then error "Invalid weekday " & theWeekday
+
+				set myWeekday to weekday of theDate
+	
+				if myWeekday is theWeekday then
+					set d to 7
+				else
+					set d to (7 + theWeekday - myWeekday) mod 7
+				end if
+	
+				set newDate to (create on theDate)'s increment by d
+				return newDate
+			end nextWeekday
+
+			-- From http://www.leancrew.com/all-this/2012/09/eight-days-a-week/
+			on lastWeekday(theWeekday)		
+				if (theWeekday is not in {Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}) then error "Invalid weekday " & theWeekday
+	
+				set myWeekday to weekday of theDate
+				if myWeekday is theWeekday then
+					set d to 7
+				else
+					set d to ((myWeekday as integer) - (theWeekday as integer) + 7) mod 7
+				end if
+	
+				return (create on theDate)'s increment by -d
+			end lastWeekday
+		end script
 		
-		if (not newDate's initialized()) then error "Could not create CalendarDate " & dateValue & " at " & aTime
-		return newDate
+		return CalendarDate		
 	end create 
 	
 	on today at timeText as text : "12:00:00AM"
 		if (timeText is missing value) then error "Handlers not using default time as expected."
-			
+	
+		set newDate to create on current date at timeText
+	
 		set newDate to create on current date at timeText
 		return newDate
 	end today
@@ -57,16 +82,148 @@ script CalendarDate
 		set newDate to (my today at timeText)'s previous()
 		return newDate
 	end yesterday
-	
+
 	on tomorrow at timeText as text : "12:00:00AM" 
 		set newDate to (my today at timeText)'s next()
 		return newDate
 	end tomorrow
 	
+	(*
+		pre: weekdayText is in {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"} (ignore case)
+		post: result is in {Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}
+	*)
+	on _textToWeekday(weekdayText as text)
+		ignoring case, white space
+			if (weekdayText is not in DAYS_OF_WEEK) then error "Invalid day of week " & weekdayText & "."
+
+			if (weekdayText is "monday") then
+				return Monday
+			else if (weekdayText is "tuesday") then
+				return Tuesday
+			else if (weekdayText is "wednesday") then
+				return Wednesday
+			else if (weekdayText is "thursday") then
+				return Thursday
+			else if (weekdayText is "friday") then
+				return Friday
+			else if (weekdayText is "saturday") then
+				return Saturday
+			else if (weekdayText is "sunday") then
+				return Sunday
+			end if
+		end ignoring	
+	end _textToWeekday
+	
+	on _textIncludesTime(dateText)
+		-- May have implicit time elements due to auto-generated text, need to find those
+		set dateTextElements to textutil's getTextElements(dateText, space)
+		set timeText to missing value
+
+		repeat with anItem in dateTextElements
+			if (anItem contains ":") then set timeText to anItem	
+		end repeat
+
+		return timeText is not missing value
+	end _textIncludesTime
+
+	on _textContainsToday(dateText)
+		ignoring case, white space
+			return dateText contains "today"
+		end ignoring
+	end _textContainsToday
+
+	on _textContainsTomorrow(dateText)
+		ignoring case, white space
+			return dateText contains "tom"
+		end ignoring
+	end _textContainsTomorrow
+
+	on _textContainsYesterday(dateText)
+		ignoring case, white space
+			return dateText contains "yesterday"
+		end ignoring	
+	end _textContainsYesterday
+
+	on _textContainsWeekday(dateText)
+		ignoring case		
+			repeat with theDay in DAYS_OF_WEEK
+				if (dateText contains theDay) then return true
+			end repeat		
+		end ignoring
+
+		return false
+	end _textContainsWeekday
+
+	on _textIsIncrement(dateText)
+		ignoring case
+			return ((dateText begins with "+") or (dateText begins with "-"))
+		end ignoring
+	end _textIsIncrement
+
+	on _textContainsWeekdayModifiers(dateText)
+		ignoring case
+			return (dateText starts with "next") or (dateText starts with "last")
+		end ignoring
+	end _textContainsWeekdayModifiers
+
+	on _textIsAWeekday(dateText)
+		set theWeekdays to DAYS_OF_WEEK
+		set validWeekday to false
+
+		ignoring case
+			set validWeekday to dateText is in DAYS_OF_WEEK
+		end ignoring
+
+		return validWeekday
+	end _textIsAWeekday
+	
+	(*
+		pre: incrText ends with {"d", "w"}
+		post: result is integer
+	*)
+	on _textToDateIncrement(incrText)
+		if (incrText is null or incrText is missing value or incrText is "") then error "Invalid date increment " & incrText & "."
+		if (get first character of incrText) is not in {"+", "-"} then error "Invalid date increment " & incrText & "."
+		if (get last character of incrText) is not in {"d", "w"} then error "Invalid date increment " & incrText & "."
+	
+		local theIncrement
+		local timeUnitMultiplier
+	
+		--Assume there are some qualifiers here
+		set endingIndex to (length of incrText) - 1
+	
+		--parse multiplier
+		if (incrText ends with "d") then
+			set timeUnitMultiplier to 1
+		else if (incrText ends with "w") then
+			set timeUnitMultiplier to 7
+		else
+			set timeUnitMultiplier to 1
+			set endingIndex to length of incrText
+		end if
+	
+		--Determine sign and value
+		if (incrText begins with "+") then
+			set startingIndex to 2
+			set theIncrement to text startingIndex thru endingIndex of incrText as integer
+		else if (incrText begins with "-") then
+			set startingIndex to 2
+			set theIncrement to text startingIndex thru endingIndex of incrText as integer
+			set theIncrement to -1 * theIncrement
+		else
+			set startingIndex to 1
+			set theIncrement to text startingIndex thru endingIndex of incrText as integer
+		end if
+	
+		set theIncrement to theIncrement * timeUnitMultiplier
+	
+		return theIncrement
+	end _textToDateIncrement
+
 	on parse from dateText as text at defaultTimeText : "12:00:00AM"
 		local newDate --Type is CalendarDate
 		local timeText
-		
+
 		if (dateText contains TIME_DELIM)
 			set dateTextElements to textUtil's getTextElements(dateText, TIME_DELIM)
 			if (count of dateTextElements is not 2) then error "Incomplete date and time string: " & dateText
@@ -78,7 +235,7 @@ script CalendarDate
 			set dateTextElements to textutil's getTextElements(dateText, space)
 			set timeText to missing value
 			set dateText to ""
-	
+
 			repeat with anItem in dateTextElements
 				ignoring case
 					if (anItem contains ":") then --Assumes the AM/PM is right on it
@@ -92,237 +249,49 @@ script CalendarDate
 					end 
 				end ignoring
 			end repeat
-			
+
 			if (timeText is missing value) then 
 				set timeText to defaultTimeText
 			end 
 		end 
-	
+
 		ignoring case
 			-- today
-			if (textContainsToday(dateText)) then 
+			if (_textContainsToday(dateText)) then 
 				set newDate to today at timeText
 			-- tomorrow
-			else if (textContainsTomorrow(dateText)) then
+			else if (_textContainsTomorrow(dateText)) then
 				set newDate to tomorrow at timeText
 			-- yesterday
-			else if (textContainsYesterday(dateText)) then
+			else if (_textContainsYesterday(dateText)) then
 				set newDate to yesterday at timeText
 			-- Check for next weekdays	
 			else if (dateText begins with "next ") then
-				set newDate to (today at timeText)'s nextWeekday(textToWeekday(text 6 thru (length of dateText) of dateText))
+				set newDate to (today at timeText)'s nextWeekday(_textToWeekday(text 6 thru (length of dateText) of dateText))
 			-- Check for last weekdays
 			else if (dateText begins with "last ") then
-				set newDate to (today at timeText)'s lastWeekday(textToWeekday(text 6 thru (length of dateText) of dateText))
+				set newDate to (today at timeText)'s lastWeekday(_textToWeekday(text 6 thru (length of dateText) of dateText))
 			-- Check for regular weekdays
-			else if (textContainsWeekday(dateText))
+			else if (_textContainsWeekday(dateText))
 				set newDate to (today at timeText)
 				set theWeekday to weekday of newDate's asDate()
-				if theWeekday is not textToWeekday(dateText) then
-					set newDate to newDate's nextWeekday(textToWeekday(dateText))
+				if theWeekday is not _textToWeekday(dateText) then
+					set newDate to newDate's nextWeekday(_textToWeekday(dateText))
 				end if
-			else if (textIsIncrement(dateText)) 
-				set newDate to (today at timeText)'s increment by textToDateIncrement(dateText)
+			else if (_textIsIncrement(dateText)) 
+				set newDate to (today at timeText)'s increment by _textToDateIncrement(dateText)
 			else 
 				set newDate to create on date dateText at timeText
 			end if
 		end ignoring		
-		
+
 		if (newDate is missing value) then error "Date not created from text: " & dateText
 		return newDate	
 	end parse
-	
-	on initializeDate(dateValue as date)
-		if theDate is not missing value then error "Date already set."
-		set theDate to dateValue
-	end initializeDate
-	
-	on increment by numDays
-		verifyInitalization()		
-		set newDate to create on (theDate + numDays * days)
-		return newDate
-	end next
-	
-	on next()
-		return increment by 1
-	end next
-	
-	on previous()
-		return increment by -1
-	end previous
-	
-	on asDate()
-		return theDate
-	end asDate
-		
-	-- From http://www.leancrew.com/all-this/2012/09/eight-days-a-week/
-	on nextWeekday(theWeekday)
-		verifyInitalization()
-		
-		if (theWeekday is not in {Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}) then error "Invalid weekday " & theWeekday
-
-		set myWeekday to weekday of theDate
-		
-		if myWeekday is theWeekday then
-			set d to 7
-		else
-			set d to (7 + theWeekday - myWeekday) mod 7
-		end if
-		
-		set newDate to (create on theDate)'s increment by d
-		return newDate
-	end nextWeekday
-	
-	-- From http://www.leancrew.com/all-this/2012/09/eight-days-a-week/
-	on lastWeekday(theWeekday)
-		verifyInitalization()
-		
-		if (theDate is missing value) then error "CalendarDate not initialized properly."
-		if (theWeekday is not in {Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}) then error "Invalid weekday " & theWeekday
-		
-		set myWeekday to weekday of theDate
-		if myWeekday is theWeekday then
-			set d to 7
-		else
-			set d to ((myWeekday as integer) - (theWeekday as integer) + 7) mod 7
-		end if
-		
-		return (create on theDate)'s increment by -d
-	end lastWeekday
-	
-	on textIncludesTime(dateText)
-		-- May have implicit time elements due to auto-generated text, need to find those
-		set dateTextElements to textutil's getTextElements(dateText, space)
-		set timeText to missing value
-	
-		repeat with anItem in dateTextElements
-			if (anItem contains ":") then set timeText to anItem	
-		end repeat
-	
-		return timeText is not missing value
-	end textIncludesTime
-	
-	on textContainsToday(dateText)
-		ignoring case, white space
-			return dateText contains "today"
-		end ignoring
-	end textContainsToday
-
-	on textContainsTomorrow(dateText)
-		ignoring case, white space
-			return dateText contains "tom"
-		end ignoring
-	end textContainsTomorrow
-
-	on textContainsYesterday(dateText)
-		ignoring case, white space
-			return dateText contains "yesterday"
-		end ignoring	
-	end textContainsYesterday
-	
-	on textContainsWeekday(dateText)
-		ignoring case		
-			repeat with theDay in DAYS_OF_WEEK
-				if (dateText contains theDay) then return true
-			end repeat		
-		end ignoring
-	
-		return false
-	end textContainsWeekday
-	
-	on textIsIncrement(dateText)
-		ignoring case
-			return ((dateText begins with "+") or (dateText begins with "-"))
-		end ignoring
-	end textIsIncrement
-
-	on textContainsWeekdayModifiers(dateText)
-		ignoring case
-			return (dateText starts with "next") or (dateText starts with "last")
-		end ignoring
-	end textContainsWeekdayModifiers
-
-	on textIsAWeekday(dateText)
-		set theWeekdays to DAYS_OF_WEEK
-		set validWeekday to false
-	
-		ignoring case
-			set validWeekday to dateText is in DAYS_OF_WEEK
-		end ignoring
-	
-		return validWeekday
-	end textIsAWeekday
-
 end script
 
-(*
-	pre: incrText ends with {"d", "w"}
-	post: result is integer
-*)
-on textToDateIncrement(incrText)
-	if (incrText is null or incrText is missing value or incrText is "") then error "Invalid date increment " & incrText & "."
-	if (get first character of incrText) is not in {"+", "-"} then error "Invalid date increment " & incrText & "."
-	if (get last character of incrText) is not in {"d", "w"} then error "Invalid date increment " & incrText & "."
-	
-	local theIncrement
-	local timeUnitMultiplier
-	
-	--Assume there are some qualifiers here
-	set endingIndex to (length of incrText) - 1
-	
-	--parse multiplier
-	if (incrText ends with "d") then
-		set timeUnitMultiplier to 1
-	else if (incrText ends with "w") then
-		set timeUnitMultiplier to 7
-	else
-		set timeUnitMultiplier to 1
-		set endingIndex to length of incrText
-	end if
-	
-	--Determine sign and value
-	if (incrText begins with "+") then
-		set startingIndex to 2
-		set theIncrement to text startingIndex thru endingIndex of incrText as integer
-	else if (incrText begins with "-") then
-		set startingIndex to 2
-		set theIncrement to text startingIndex thru endingIndex of incrText as integer
-		set theIncrement to -1 * theIncrement
-	else
-		set startingIndex to 1
-		set theIncrement to text startingIndex thru endingIndex of incrText as integer
-	end if
-	
-	set theIncrement to theIncrement * timeUnitMultiplier
-	
-	return theIncrement
-end 
 
-(*
-	pre: weekdayText is in {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"} (ignore case)
-	post: result is in {Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday}
-*)
-on textToWeekday(weekdayText as text)
-	ignoring case, white space
-		if (weekdayText is not in DAYS_OF_WEEK) then error "Invalid day of week " & weekdayText & "."
 
-		if (weekdayText is "monday") then
-			return Monday
-		else if (weekdayText is "tuesday") then
-			return Tuesday
-		else if (weekdayText is "wednesday") then
-			return Wednesday
-		else if (weekdayText is "thursday") then
-			return Thursday
-		else if (weekdayText is "friday") then
-			return Friday
-		else if (weekdayText is "saturday") then
-			return Saturday
-		else if (weekdayText is "sunday") then
-			return Sunday
-		end if
-	end ignoring	
-end textToWeekday
 
 on parseTimestamp(timestamp)
 	local parsedDate

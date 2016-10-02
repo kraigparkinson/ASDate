@@ -1,3 +1,6 @@
+use AppleScript version "2.4"
+use scripting additions
+
 (*!
 	@header dateutil
 		dateutil self tests.
@@ -6,7 +9,7 @@
 	@copyright 2015 kraigparkinson
 *)
 
-property dateutil : script "com.kraigparkinson/ASDate"
+use dateutil : script "com.kraigparkinson/ASDate"
 
 property parent : script "com.lifepillar/ASUnit"
 property suite : makeTestSuite("OF Date Parsing")
@@ -122,16 +125,15 @@ script |Format Dates|
 		set todaysDate to current date
 		set todaysDate to date "12:00:00AM" of todaysDate
 		
-		tell dateutil's CalendarDate
+		tell dateutil's CalendarDateFactory
 			my assertEqual(todaysDate, (create on todaysDate)'s asDate())
 			my assertEqual(date "08:00AM" of todaysDate, (create on todaysDate at "8:00:00AM")'s asDate())
 		end tell 
 	end script
 	
 	
-	on testCalendarDateFactoryWorks(expectedDate, actualCalendarDate)
-		assertEqual(true, actualCalendarDate's initialized())
-		assertEqual(expectedDate, actualCalendarDate's asDate())
+	on testCalendarDateFactoryWorks(expectedDate, actualCalendarDateFactory)
+		assertEqual(expectedDate, actualCalendarDateFactory's asDate())
 	end testCalendarDateFactoryWorks
 	
 	script |today|
@@ -140,7 +142,7 @@ script |Format Dates|
 		set todaysDate to current date		
 		
 		-- Alternate test code		
-		tell dateutil's CalendarDate
+		tell dateutil's CalendarDateFactory
 --			my testCalendarDateFactoryWorks(date "12:00AM" of todaysDate, (today))
 			my testCalendarDateFactoryWorks(date "1:00AM" of todaysDate, (today at "1:00AM"))
 		end tell
@@ -151,7 +153,7 @@ script |Format Dates|
 		
 		set expectedDate to current date - 1 * days
 		
-		tell dateutil's CalendarDate
+		tell dateutil's CalendarDateFactory
 --			my testCalendarDateFactoryWorks(date "12:00AM" of expectedDate, yesterday)
 			my testCalendarDateFactoryWorks(date "1:00AM" of expectedDate, yesterday at "1:00AM")
 		end tell
@@ -167,7 +169,7 @@ script |Format Dates|
 		set expectedDate to date "12:00:00AM" of expectedDate
 		set expectedDate to expectedDate + 1 * days		
 
-		tell dateutil's CalendarDate
+		tell dateutil's CalendarDateFactory
 --			my testCalendarDateFactoryWorks(expectedDate, tomorrow)
 			my testCalendarDateFactoryWorks(expectedDate, tomorrow at "12:00:00AM")
 		end tell
@@ -179,7 +181,7 @@ script |Format Dates|
 		set originalDate to date "2015-09-18 12:00:00AM"
 		set expectedDate to originalDate + 1 * days		
 		
-		my assertEqual(expectedDate, (dateutil's CalendarDate's create on originalDate)'s next()'s asDate())
+		my assertEqual(expectedDate, (dateutil's CalendarDateFactory's create on originalDate)'s next()'s asDate())
 	end script
 
 	script |previous|
@@ -188,11 +190,11 @@ script |Format Dates|
 		set originalDate to date "2015-09-19 12:00:00AM"
 		set expectedDate to originalDate - 1 * days		
 		
-		my assertEqual(expectedDate, (dateutil's CalendarDate's create on originalDate)'s previous()'s asDate())
+		my assertEqual(expectedDate, (dateutil's CalendarDateFactory's create on originalDate)'s previous()'s asDate())
 	end script	
 
-	on testDatesEqual(expectedCalendarDate, testDateString)
-		shouldEqual(expectedCalendarDate's asDate(), (dateutil's CalendarDate's parse from testDateString by "5:00:00PM")'s asDate())
+	on testDatesEqual(expectedCalendarDateFactory, testDateString)
+		shouldEqual(expectedCalendarDateFactory's asDate(), (dateutil's CalendarDateFactory's parse from testDateString by "5:00:00PM")'s asDate())
 	end testDatesEqual
 	
 	script |increment by|
@@ -200,7 +202,7 @@ script |Format Dates|
 		
 		set originalDate to date "2015-05-01 12:00:00AM"
 				
-		tell dateutil's CalendarDate
+		tell dateutil's CalendarDateFactory
 			set actualOriginalDate to create on originalDate at "12:00AM"
 			set actualFollowingDate to actualOriginalDate's increment by 0
 		
@@ -215,7 +217,7 @@ script |Format Dates|
 	end script
 	
 	on testParseFromText(expected, testDateString, defaultTimeText)
-		tell dateutil's CalendarDate
+		tell dateutil's CalendarDateFactory
 			my shouldEqual(expected's asDate(), (parse from testDateString at defaultTimeText)'s asDate())
 		end tell
 	end testParseFromText
@@ -223,7 +225,7 @@ script |Format Dates|
 	script |parse from date increments|
 		property parent : UnitTest(me)
 		
-		tell dateutil's CalendarDate
+		tell dateutil's CalendarDateFactory
 			my testParseFromText(today at "12:00:00AM", "+0d at 12:00:00AM", "05:00:00PM")
 			my testParseFromText(today at "04:00:00PM", "+0d at 04:00:00PM", "05:00:00PM")
 			my testParseFromText(today at "05:00:00PM", "+0d", "05:00:00PM")
@@ -237,7 +239,7 @@ script |Format Dates|
 	script |parse from exact dates|
 		property parent : UnitTest(me)
 		
-		tell dateutil's CalendarDate
+		tell dateutil's CalendarDateFactory
 			set todaysDate to current date
 			set todaysDate to date "12:00:00AM" of todaysDate
 			
@@ -253,7 +255,7 @@ script |Format Dates|
 	script |parse from day of week|
 		property parent : UnitTest(me)
 		
-		tell dateutil's CalendarDate
+		tell dateutil's CalendarDateFactory
 			my shouldEqual(Monday, weekday of (parse from "monday" at "8:00:00AM")'s asDate())
 			my shouldEqual(Tuesday, weekday of (parse from "tuesday" at "8:00:00AM")'s asDate())
 			my shouldEqual(Wednesday, weekday of (parse from "wednesday" at "8:00:00AM")'s asDate())
@@ -268,11 +270,11 @@ script |Format Dates|
 	script |text to date increment|
 		property parent : UnitTest(me)
 		
-		tell dateutil
-			my shouldEqual(1, textToDateIncrement("+1d"))
-			my shouldEqual(-1, textToDateIncrement("-1d"))
-			my shouldEqual(7, textToDateIncrement("+1w"))
-			my shouldEqual(14, textToDateIncrement("+2w"))
+		tell dateutil's CalendarDateFactory
+			my shouldEqual(1, _textToDateIncrement("+1d"))
+			my shouldEqual(-1, _textToDateIncrement("-1d"))
+			my shouldEqual(7, _textToDateIncrement("+1w"))
+			my shouldEqual(14, _textToDateIncrement("+2w"))
 		end tell
 		
 		testDateIncrementFails("")
@@ -282,7 +284,7 @@ script |Format Dates|
 	
 	on testDateIncrementFails(incrText)
 		try
-			dateutil's textToDateIncrement(incrText)
+			dateutil's CalendarDateFactory's _textToDateIncrement(incrText)
 		on error message
 			shouldEqual("Invalid date increment " & incrText & ".", message)
 		end		
@@ -291,21 +293,21 @@ script |Format Dates|
 	
 	on testParseDayOfWeek(expectedDate, dateString) 
 		tell dateutil
-			my shouldEqual(expectedDate's asDate(), (dateutil's CalendarDate's parse from dateString)'s asDate())		
+			my shouldEqual(expectedDate's asDate(), (dateutil's CalendarDateFactory's parse from dateString)'s asDate())		
 		end tell
 	end testParseDayOfWeek
 	
 	script |parse next weekdays|	
 		property parent : UnitTest(me)
 	
-		set aTue to (dateutil's CalendarDate's create on date "2016-03-01 12:00:00AM") 
-		set aWed to (dateutil's CalendarDate's create on date "2016-03-02 12:00:00AM") 
-		set aThu to (dateutil's CalendarDate's create on date "2016-03-03 12:00:00AM") 
-		set aFri to (dateutil's CalendarDate's create on date "2016-03-04 12:00:00AM") 
-		set aSat to (dateutil's CalendarDate's create on date "2016-03-05 12:00:00AM") 
-		set aSun to (dateutil's CalendarDate's create on date "2016-03-06 12:00:00AM") 
-		set aMon to (dateutil's CalendarDate's create on date "2016-03-07 12:00:00AM") 
-		set nTue to (dateutil's CalendarDate's create on date "2016-03-08 12:00:00AM") 
+		set aTue to (dateutil's CalendarDateFactory's create on date "2016-03-01 12:00:00AM") 
+		set aWed to (dateutil's CalendarDateFactory's create on date "2016-03-02 12:00:00AM") 
+		set aThu to (dateutil's CalendarDateFactory's create on date "2016-03-03 12:00:00AM") 
+		set aFri to (dateutil's CalendarDateFactory's create on date "2016-03-04 12:00:00AM") 
+		set aSat to (dateutil's CalendarDateFactory's create on date "2016-03-05 12:00:00AM") 
+		set aSun to (dateutil's CalendarDateFactory's create on date "2016-03-06 12:00:00AM") 
+		set aMon to (dateutil's CalendarDateFactory's create on date "2016-03-07 12:00:00AM") 
+		set nTue to (dateutil's CalendarDateFactory's create on date "2016-03-08 12:00:00AM") 
 	
 		shouldEqual(aWed's asDate(), aTue's nextWeekday(Wednesday)'s asDate())
 		shouldEqual(aThu's asDate(), aTue's nextWeekday(Thursday)'s asDate())
@@ -320,14 +322,14 @@ script |Format Dates|
 	script |parse last weekdays|
 		property parent : UnitTest(me)
 
-		set lTue to (dateutil's CalendarDate's create on date "2016-03-01 12:00:00AM") 
-		set lWed to (dateutil's CalendarDate's create on date "2016-03-02 12:00:00AM") 
-		set lThu to (dateutil's CalendarDate's create on date "2016-03-03 12:00:00AM") 
-		set lFri to (dateutil's CalendarDate's create on date "2016-03-04 12:00:00AM") 
-		set lSat to (dateutil's CalendarDate's create on date "2016-03-05 12:00:00AM") 
-		set lSun to (dateutil's CalendarDate's create on date "2016-03-06 12:00:00AM") 
-		set lMon to (dateutil's CalendarDate's create on date "2016-03-07 12:00:00AM") 
-		set aTue to (dateutil's CalendarDate's create on date "2016-03-08 12:00:00AM") 
+		set lTue to (dateutil's CalendarDateFactory's create on date "2016-03-01 12:00:00AM") 
+		set lWed to (dateutil's CalendarDateFactory's create on date "2016-03-02 12:00:00AM") 
+		set lThu to (dateutil's CalendarDateFactory's create on date "2016-03-03 12:00:00AM") 
+		set lFri to (dateutil's CalendarDateFactory's create on date "2016-03-04 12:00:00AM") 
+		set lSat to (dateutil's CalendarDateFactory's create on date "2016-03-05 12:00:00AM") 
+		set lSun to (dateutil's CalendarDateFactory's create on date "2016-03-06 12:00:00AM") 
+		set lMon to (dateutil's CalendarDateFactory's create on date "2016-03-07 12:00:00AM") 
+		set aTue to (dateutil's CalendarDateFactory's create on date "2016-03-08 12:00:00AM") 
 	
 		shouldEqual(lMon's asDate(), aTue's lastWeekday(Monday)'s asDate())
 		shouldEqual(lSun's asDate(), aTue's lastWeekday(Sunday)'s asDate())
@@ -342,43 +344,43 @@ script |Format Dates|
 	script |is a weekday|
 		property parent : UnitTest(me)
 
-		tell dateutil's CalendarDate
-			my should(textIsAWeekday("monday"), "monday")
-			my should(textIsAWeekday("tuesday"), "tuesday")
-			my should(textIsAWeekday("wednesday"), "wednesday")
-			my should(textIsAWeekday("thursday"), "thursday")
-			my should(textIsAWeekday("friday"), "friday")
-			my should(textIsAWeekday("saturday"), "saturday")
-			my should(textIsAWeekday("sunday"), "sunday")
+		tell dateutil's CalendarDateFactory
+			my should(_textIsAWeekday("monday"), "monday")
+			my should(_textIsAWeekday("tuesday"), "tuesday")
+			my should(_textIsAWeekday("wednesday"), "wednesday")
+			my should(_textIsAWeekday("thursday"), "thursday")
+			my should(_textIsAWeekday("friday"), "friday")
+			my should(_textIsAWeekday("saturday"), "saturday")
+			my should(_textIsAWeekday("sunday"), "sunday")
 		end tell
 	end script
 
 	script |contains weekday|
 		property parent : UnitTest(me)
 
-		tell dateutil's CalendarDate
-			my should(textContainsWeekday("monday"), "monday")
-			my should(textContainsWeekday("tuesday"), "tuesday")
-			my should(textContainsWeekday("wednesday"), "wednesday")
-			my should(textContainsWeekday("thursday"), "thursday")
-			my should(textContainsWeekday("friday"), "friday")
-			my should(textContainsWeekday("saturday"), "saturday")
-			my should(textContainsWeekday("sunday"), "sunday")
-			my refute(textContainsWeekday("notaday"), "notaday")
+		tell dateutil's CalendarDateFactory
+			my should(_textContainsWeekday("monday"), "monday")
+			my should(_textContainsWeekday("tuesday"), "tuesday")
+			my should(_textContainsWeekday("wednesday"), "wednesday")
+			my should(_textContainsWeekday("thursday"), "thursday")
+			my should(_textContainsWeekday("friday"), "friday")
+			my should(_textContainsWeekday("saturday"), "saturday")
+			my should(_textContainsWeekday("sunday"), "sunday")
+			my refute(_textContainsWeekday("notaday"), "notaday")
 		end tell
 	end script
 
 	script |parse weekday|
 		property parent : UnitTest(me)
 
-		tell dateutil's CalendarDate
-			my shouldEqual(Monday, textToWeekday("monday"))
-			my shouldEqual(Tuesday, textToWeekday("tuesday"))
-			my shouldEqual(Wednesday, textToWeekday("wednesday"))
-			my shouldEqual(Thursday, textToWeekday("thursday"))
-			my shouldEqual(Friday, textToWeekday("friday"))
-			my shouldEqual(Saturday, textToWeekday("saturday"))
-			my shouldEqual(Sunday, textToWeekday("sunday"))
+		tell dateutil's CalendarDateFactory
+			my shouldEqual(Monday, _textToWeekday("monday"))
+			my shouldEqual(Tuesday, _textToWeekday("tuesday"))
+			my shouldEqual(Wednesday, _textToWeekday("wednesday"))
+			my shouldEqual(Thursday, _textToWeekday("thursday"))
+			my shouldEqual(Friday, _textToWeekday("friday"))
+			my shouldEqual(Saturday, _textToWeekday("saturday"))
+			my shouldEqual(Sunday, _textToWeekday("sunday"))
 		end tell
 		
 		testParseWeekdayFails("notaday")
@@ -388,7 +390,7 @@ script |Format Dates|
 
 	on testParseWeekdayFails(testValue) 
 		try
-			dateutil's CalendarDate's textToWeekday(testValue)
+			dateutil's CalendarDateFactory's _textToWeekday(testValue)
 			fail("Error not raised.")
 		on error message
 			shouldEqual("Invalid day of week " & testValue & ".", message)
@@ -398,13 +400,13 @@ script |Format Dates|
 	script |contains weekday modifiers|
 		property parent : UnitTest(me)
 		
-		tell dateutil's CalendarDate
-			my should(textContainsWeekdayModifiers("next"), "next")
-			my should(textContainsWeekdayModifiers("last"), "last")
-			my should(textContainsWeekdayModifiers("last wednesday"), "last")
+		tell dateutil's CalendarDateFactory
+			my should(_textContainsWeekdayModifiers("next"), "next")
+			my should(_textContainsWeekdayModifiers("last"), "last")
+			my should(_textContainsWeekdayModifiers("last wednesday"), "last")
 			
-			my refute(textContainsWeekdayModifiers("some"), "some")
-			my refute(textContainsWeekdayModifiers("wednesday"), "wednesday")
+			my refute(_textContainsWeekdayModifiers("some"), "some")
+			my refute(_textContainsWeekdayModifiers("wednesday"), "wednesday")
 		end tell
 		
 	
@@ -413,14 +415,14 @@ script |Format Dates|
 	script |text includes time|
 		property parent : UnitTest(me)
 		
-		should(dateutil's CalendarDate's textIncludesTime("Sep 18, 2015 08:00AM"), "Text should include time.")
-		should(dateutil's CalendarDate's textIncludesTime("2015-09-19 08:00AM"), "Text should include time.")
-		should(dateutil's CalendarDate's textIncludesTime("2015-05-24 1:00PM"), "Should be true")
-		refute(dateutil's CalendarDate's textIncludesTime("2015-05-24"), "Should be false")		
+		should(dateutil's CalendarDateFactory's _textIncludesTime("Sep 18, 2015 08:00AM"), "Text should include time.")
+		should(dateutil's CalendarDateFactory's _textIncludesTime("2015-09-19 08:00AM"), "Text should include time.")
+		should(dateutil's CalendarDateFactory's _textIncludesTime("2015-05-24 1:00PM"), "Should be true")
+		refute(dateutil's CalendarDateFactory's _textIncludesTime("2015-05-24"), "Should be false")		
 	end script
 	
 	on testNextWeekdayAbsolute(originalDate, expectedDateText, theWeekday)
-		shouldEqual(date expectedDateText, (dateutil's CalendarDate's create on originalDate)'s nextWeekday(theWeekday)'s asDate())		
+		shouldEqual(date expectedDateText, (dateutil's CalendarDateFactory's create on originalDate)'s nextWeekday(theWeekday)'s asDate())		
 	end testNextWeekdayAbsolute
 
 	script |next weekday absolute|
@@ -438,7 +440,7 @@ script |Format Dates|
 	end script
 
 	on testLastWeekdayAbsolute(originalDate, expectedDateText, theWeekday)
-		shouldEqual(date expectedDateText, (dateutil's CalendarDate's create on originalDate)'s lastWeekday(theWeekday)'s asDate())		
+		shouldEqual(date expectedDateText, (dateutil's CalendarDateFactory's create on originalDate)'s lastWeekday(theWeekday)'s asDate())		
 	end testLastWeekdayAbsolute
 
 	script |last weekday absolute|

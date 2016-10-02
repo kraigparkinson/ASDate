@@ -30,7 +30,10 @@ script BuildASDate
 	property name : "ASDate"
 	property description : "Build ASDate"
 	
-	makeScriptBundle from "src/ASDate.applescript" at "build" with overwriting
+	property sourceDir : "src/"
+	property destinationDir : "build/Script Libraries/com.kraigparkinson"
+	
+	makeScriptBundle from joinPath(sourceDir, "ASDate.applescript") at destinationDir with overwriting
 end script
 
 script build
@@ -102,25 +105,13 @@ script install
 	property parent : Task(me)
 	property dir : POSIX path of Â
 		((path to library folder from user domain) as text) & "Script Libraries"
-	property description : "Install OFTaskParser in" & space & dir
-	
-	
+	property description : "Install ASDate in" & space & dir
+		
 	tell BuildASDate to exec:{}
 	set targetDir to joinPath(dir, "com.kraigparkinson")
 	set targetPath to joinPath(targetDir, "ASDate.scptd")
-	(*
-	if pathExists(targetPath) then
-		tell application "Terminal"
-			activate
-			display alert Â
-				"A version of ASDate is already installed." message targetPath & space & Â
-				"exists. Overwrite?" as warning Â
-				buttons {"Cancel", "OK"} Â
-				default button "Cancel" cancel button "Cancel"
-		end tell
-	end if
-	*)
-	copyItem at "build/ASDate.scptd" into targetDir with overwriting
+
+	copyItem at "build/com.kraigparkinson/ASDate.scptd" into targetDir with overwriting
 	ohai("ASDate installed at" & space & targetPath)
 	
 end script
@@ -130,6 +121,7 @@ script BuildTests
 	property name : "test/build"
 	property description : "Build tests, but do not run them"
 	
+	tell Build to exec:{}
 	owarn("Due to bugs in OS X Yosemite, building tests requires ASUnit to be installed.")
 	makeScriptBundle from "test/Test ASDate.applescript" at "test" with overwriting
 end script
