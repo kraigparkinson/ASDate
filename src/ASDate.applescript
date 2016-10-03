@@ -70,6 +70,7 @@ script CalendarDateFactory
 	end create 
 	
 	on today at timeText as text : "12:00:00AM"
+		return create on current date at timeText	
 	end today
 	
 	on yesterday at timeText as text : "12:00:00AM"
