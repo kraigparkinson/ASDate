@@ -70,22 +70,14 @@ script CalendarDateFactory
 	end create 
 	
 	on today at timeText as text : "12:00:00AM"
-		if (timeText is missing value) then error "Handlers not using default time as expected."
-	
-		set newDate to create on current date at timeText
-	
-		set newDate to create on current date at timeText
-		return newDate
 	end today
 	
 	on yesterday at timeText as text : "12:00:00AM"
-		set newDate to (my today at timeText)'s previous()
-		return newDate
+		return (today at timeText)'s previous()
 	end yesterday
 
 	on tomorrow at timeText as text : "12:00:00AM" 
-		set newDate to (my today at timeText)'s next()
-		return newDate
+		return (today at timeText)'s next()
 	end tomorrow
 	
 	(*
